@@ -1,0 +1,20 @@
+{
+  "pipoca": [
+    {
+      "white": 359,
+      "grey": 424,
+      "black": 0,
+      "width": 27,
+      "height": 29
+    }
+  ],
+  "chave": [
+    {
+      "white": 199,
+      "grey": 276,
+      "black": 247,
+      "width": 38,
+      "height": 19
+    }
+  ]
+}

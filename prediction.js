@@ -1,20 +1,62 @@
-const tf = require('@tensorflow/tfjs');
-const mobilenet = require('@tensorflow-models/mobilenet');
-const tfnode = require('@tensorflow/tfjs-node');
+const sharp = require('sharp');
+const _ = require('lodash');
 const fs = require('fs');
 
-(async () => {
+const { removeBlackLines, cropBorders, splitImages, getImageParams, getScore } = require('./image-manipulation');
 
-  const path = `images/rabbit.jpg`;
+const makePrediction = async (symbol, imgPath, output) => {
 
-  const imageBuffer = fs.readFileSync(path);
+  const model = JSON.parse(fs.readFileSync('model.json'))[symbol];
 
-  const tfimage = tfnode.node.decodeImage(imageBuffer);
+  if (!model) {
+    console.log(`O simbolo ${symbol} não foi encontrado`);
+    return;
+  }
 
-  // Load the model.
-  const mobilenetModel = await mobilenet.load();
-  // Classify the image.
-  const predictions = await mobilenetModel.classify(tfimage);
+  let { width, height, format } = await sharp(imgPath).metadata();
+
+  const imgData = await sharp(imgPath).raw().toBuffer();
+
+  // 3 channels RGB
+  let pixels = _.chunk(imgData, 3);
   
-  console.log('Classification Results:', predictions);
-})();
+  pixels = removeBlackLines(pixels, width);
+
+  let images = splitImages(pixels, height, width);
+
+  let scores = images.map((image, i) => {
+
+    image = cropBorders(image.pixels, image.height, image.width);
+
+    let params = getImageParams(image);
+
+    let score = getScore(params, model);
+
+    if (output) {
+      sharp(Buffer.from(_.concat(...image.pixels)), {
+        raw: {
+          width: image.width,
+          height: image.height,
+          channels: 3
+        }
+      }).toFile(`output/test${i}.${format}`);
+    }
+
+    return score;
+  })
+
+  const indexMatch = _.indexOf(scores, _.min(scores));
+
+  const bestScore = scores[indexMatch]
+
+  if (bestScore < 120) {
+    console.log(`O simbolo ${symbol} esta na posição ${indexMatch+1}`);
+  } else {
+    console.log(`O simbolo ${symbol} pode estar na posição ${indexMatch+1}`);
+  }
+
+}
+
+module.exports = {
+  makePrediction
+};

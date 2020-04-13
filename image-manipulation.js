@@ -19,8 +19,6 @@ const removeBlackLines = (pixels, width) => {
   });
 }
 
-const isWhite = data => data.every(a => a >= 240);
-
 const cropBorders = (pixels, height, width) => {
   let top, bottom, left, right;
 
@@ -116,8 +114,54 @@ const splitImages = (pixels, height, width) => {
   return images.filter(image => !isWhite(_.concat(...image.pixels)));
 }
 
+const isWhite = data => data.every(a => a >= 240);
+const isBlack = data => data.every(a => a <= 10);
+const isGrey = data => data.every(a => a < 240 && a > 10);
+
+const getImageParams = ({ width, height, pixels }) => {
+  let results = {
+    white: 0,
+    grey: 0,
+    black: 0,
+    width,
+    height
+  };
+  
+  pixels.forEach(pixel => {
+    if (isGrey(pixel)) {
+      results.grey++;
+    } else if (isBlack(pixel)) {
+      results.black++;
+    } else if (isWhite(pixel)) {
+      results.white++;
+    }
+  });
+  
+  return results;
+};
+
+const getScore = (contest, models) => {
+
+  let score = models.map(model => {
+    return {
+      grey: Math.abs(model.grey - contest.grey),
+      black: Math.abs(model.black - contest.black),
+      size: Math.abs(
+        model.width + model.height - contest.width - contest.height
+      ),
+      width: Math.abs(model.width - contest.width),
+      height: Math.abs(model.height - contest.height)
+    }
+  })
+  .map(({ grey, black, width, height }) => grey + black + width + height)
+
+  return _.min(score);
+}
+
 module.exports = {
   removeBlackLines,
   cropBorders,
-  splitImages
+  splitImages,
+  getImageParams,
+  getScore
 };
